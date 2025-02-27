@@ -2,7 +2,7 @@
 
 
 <div align="center">
-  <img src="vis_5(3).png" />
+  <img src="open_loop/vis_5(3).png" />
 </div>
 
 ## Abstract
