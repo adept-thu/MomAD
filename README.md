@@ -1,4 +1,4 @@
-# Don't Shake the Wheel: Momentum-Aware Planning in End-to-End Autonomous Driving
+#[CVPR2025] Don't Shake the Wheel: Momentum-Aware Planning in End-to-End Autonomous Driving
 
 
 <div align="center">
