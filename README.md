@@ -164,7 +164,7 @@ SparseDrive   |0.35 | 0.77 | 1.46 | 0.86 | 0.04 | 0.17 | 0.98 | 0.40 | 0.34 | 0.
       <th rowspan="2">Method</th>
       <th colspan="2">Detection</th>
       <th colspan="1">Tracking</th>
-      <th colspan="1">Mapping</th>
+      <th colspan="1">ping</th>
       <th colspan="1">Motion</th>
       <th colspan="3">Planning</th>
     </tr>
@@ -172,7 +172,7 @@ SparseDrive   |0.35 | 0.77 | 1.46 | 0.86 | 0.04 | 0.17 | 0.98 | 0.40 | 0.34 | 0.
       <th>mAP ↑</th>
       <th>NDS ↑</th>
       <th>AMOTA ↑</th>
-      <th>mAP ↓</th>
+      <th>mAP ↑</th>
       <th>mADE ↓</th>
       <th>L2 ↓</th>
       <th>Col. ↓</th>
