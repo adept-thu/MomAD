@@ -1,5 +1,12 @@
 # [CVPR2025] Don't Shake the Wheel: Momentum-Aware Planning in End-to-End Autonomous Driving
 
+<div align="justify">  
+
+This is the official repository of [**MomAD**](https://arxiv.org/pdf/2503.03125). 
+
+:fire: Our work has been accepted by CVPR 2025!
+
+</div>
 
 <div align="center">
   <img src="open_loop/vis_5(3).png" />
