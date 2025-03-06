@@ -304,9 +304,19 @@ python tools/data_converter/nuscenes_converter_6s.py nuscenes \
 
 [Quick start for Close_loop](close_loop/quick_start.md)
 
-
-
-
+## Citation
+If you find MomAD is useful in your research or applications, please consider giving us a star 🌟 and citing it by the following BibTeX entry.
+```
+@article{song2025momad,
+      title={Don't Shake the Wheel: Momentum-Aware Planning in End-to-End Autonomous Driving}, 
+      author={Ziying Song and Caiyan Jia and Lin Liu and Hongyu Pan and Yongchang Zhang and Junming Wang and Xingyu Zhang and Shaoqing Xu and Lei Yang and Yadan Luo},
+      year={2025},
+      eprint={2503.03125},
+      archivePrefix={arXiv},
+      primaryClass={cs.RO},
+      url={https://arxiv.org/abs/2503.03125}, 
+}
+```
 ## Acknowledgement
 - [SparseDrive](https://github.com/swc-17/SparseDrive)
 - [UniAD](https://github.com/OpenDriveLab/UniAD) 
