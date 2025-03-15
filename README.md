@@ -2,7 +2,7 @@
 
 <div align="justify">  
 
-This is the official repository of [**MomAD**](https://arxiv.org/pdf/2503.03125). 
+This is the official repository of [**MomAD**](https://arxiv.org/abs/2503.03125). 
 
 :fire: Our work has been accepted by CVPR 2025!
 
