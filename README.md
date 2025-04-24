@@ -78,7 +78,8 @@ SparseDrive   |0.35 | 0.77 | 1.46 | 0.86 | 0.04 | 0.17 | 0.98 | 0.40 | 0.34 | 0.
 ### Close-loop mertics
 
 - Open-loop and Closed-loop Results of E2E-AD Methods in Bench2Drive (V0.0.3)} under base training set. `mmt' denotes the extension of VAD on Multi-modal Trajectory. * denotes our re-implementation. The metircs momad used follows [Bench2Drive](https://github.com/Thinklab-SJTU/Bench2Drive)
-The weight of MomAD (stage-1) in Bench2Drive:[MomAD](https://pan.baidu.com/s/1qBVdpXUohfveU8au9ShAyg?pwd=u36f)
+- 
+The **weight** and **pkl** of MomAD (stage-1) in Bench2Drive:[**MomAD**](https://pan.baidu.com/s/1qBVdpXUohfveU8au9ShAyg?pwd=u36f)
 <table border="1">
   <thead>
     <tr>
