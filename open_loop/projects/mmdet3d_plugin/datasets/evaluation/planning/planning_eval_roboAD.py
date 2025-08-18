@@ -139,6 +139,7 @@ class PlanningMetric():
         self.total +=len(trajs)
 
     def compute(self):
+        print(self.total)
         return {
             'obj_col': self.obj_col / self.total,
             'obj_box_col': self.obj_box_col / self.total,
@@ -176,7 +177,7 @@ def planning_eval_roboAD(results, eval_config, logger):
     metric_dict = {}
 
     planning_tab.field_names = [
-    "metrics", "0.5s", "1.0s", "1.5s", "2.0s", "2.5s", "3.0s","3.5s","4.0s","4.5s","5.0s","5.5s","6.0s","avg"]
+    "metrics", "0.5s", "1.0s", "1.5s", "2.0s", "2.5s", "3.0s","avg"]
     for key in planning_results.keys():
         value = planning_results[key].tolist()
         new_values = []

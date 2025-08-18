@@ -1,6 +1,6 @@
 # ================ base config ===================
-version = 'mini'
-# version = 'trainval'
+# version = 'mini'
+version = 'trainval'
 length = {'trainval': 28130, 'mini': 323}
 
 plugin = True
@@ -618,8 +618,8 @@ eval_pipeline = [
             'gt_ego_fut_cmd',
             'fut_boxes'
         ],
-        meta_keys=["T_global", "T_global_inv", "timestamp", "instance_id","token"],
-        # meta_keys=['token', 'timestamp']
+        # meta_keys=["T_global", "T_global_inv", "timestamp", "instance_id","token"],
+        meta_keys=['token', 'timestamp']
     ),
 ]
 
