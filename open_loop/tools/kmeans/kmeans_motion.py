@@ -86,6 +86,7 @@ for idx in tqdm(range(len(data_infos))):
 
 clusters = []
 for i in range(len(CLASSES)):
+    import pdb;pdb.set_trace()
     intention_cls = np.concatenate(intention[i], axis=0).reshape(-1, 24)
     if intention_cls.shape[0] < K:
         continue

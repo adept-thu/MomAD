@@ -139,6 +139,8 @@ class PlanningMetric():
         self.total +=len(trajs)
 
     def compute(self):
+        print(self.total)
+
         return {
             'obj_col': self.obj_col / self.total,
             'obj_box_col': self.obj_box_col / self.total,

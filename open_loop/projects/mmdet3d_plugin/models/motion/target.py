@@ -9,7 +9,8 @@ def get_cls_target(
     reg_preds, 
     reg_target,
     reg_weight,
-):
+):  
+    #import pdb;pdb.set_trace()
     bs, num_pred, mode, ts, d = reg_preds.shape
     reg_preds_cum = reg_preds.cumsum(dim=-2)
     reg_target_cum = reg_target.cumsum(dim=-2)
@@ -24,15 +25,15 @@ def get_best_reg(
     reg_target,
     reg_weight,
 ):
-    bs, num_pred, mode, ts, d = reg_preds.shape
+    bs, num_pred, mode, ts, d = reg_preds.shape # plan [6,1,6,6,2]
     reg_preds_cum = reg_preds.cumsum(dim=-2)
     reg_target_cum = reg_target.cumsum(dim=-2)
-    dist = torch.linalg.norm(reg_target_cum.unsqueeze(2) - reg_preds_cum, dim=-1)
-    dist = dist * reg_weight.unsqueeze(2)
+    dist = torch.linalg.norm(reg_target_cum.unsqueeze(2) - reg_preds_cum, dim=-1) # [6,1,6,6]
+    dist = dist * reg_weight.unsqueeze(2) # reg_weight.unsqueeze(2) = [6,1,6,6]
     dist = dist.mean(dim=-1)
-    mode_idx = torch.argmin(dist, dim=-1)
+    mode_idx = torch.argmin(dist, dim=-1) # [6,1] 0,4,1,0,0,1
     mode_idx = mode_idx[..., None, None, None].repeat(1, 1, 1, ts, d)
-    best_reg = torch.gather(reg_preds, 2, mode_idx).squeeze(2)
+    best_reg = torch.gather(reg_preds, 2, mode_idx).squeeze(2) # torch.Size([6, 1, 6, 2])
     return best_reg
 
 
@@ -49,7 +50,7 @@ class MotionTarget():
         gt_reg_target,
         gt_reg_mask,
         motion_loss_cache,
-    ):
+    ):  
         bs, num_anchor, mode, ts, d = reg_pred.shape
         reg_target = reg_pred.new_zeros((bs, num_anchor, ts, d))
         reg_weight = reg_pred.new_zeros((bs, num_anchor, ts))
@@ -87,22 +88,24 @@ class PlanningTarget():
         gt_reg_target,
         gt_reg_mask,
         data,
-    ):
-        gt_reg_target = gt_reg_target.unsqueeze(1)
-        gt_reg_mask = gt_reg_mask.unsqueeze(1)
+    ):  
+        # import pdb;pdb.set_trace()
+        gt_reg_target = gt_reg_target.unsqueeze(1) # [6,1,6,2]
+        gt_reg_mask = gt_reg_mask.unsqueeze(1) # [6,1,6]
 
-        bs = reg_pred.shape[0]
-        bs_indices = torch.arange(bs, device=reg_pred.device)
-        cmd = data['gt_ego_fut_cmd'].argmax(dim=-1)
+        bs = reg_pred.shape[0] # [6, 1, 18, 6, 2]
+        bs_indices = torch.arange(bs, device=reg_pred.device) # [0,1,2,3,4,5]
+        cmd = data['gt_ego_fut_cmd'].argmax(dim=-1) # [2, 2, 2, 2, 2, 2]
 
-        cls_pred = cls_pred.reshape(bs, 3, 1, self.ego_fut_mode)
-        reg_pred = reg_pred.reshape(bs, 3, 1, self.ego_fut_mode, self.ego_fut_ts, 2)
-        cls_pred = cls_pred[bs_indices, cmd]
-        reg_pred = reg_pred[bs_indices, cmd]
-        cls_target = get_cls_target(reg_pred, gt_reg_target, gt_reg_mask)
-        cls_weight = gt_reg_mask.any(dim=-1)
+        cls_pred = cls_pred.reshape(bs, 3, 1, self.ego_fut_mode) # [6,3,1,6]
+        reg_pred = reg_pred.reshape(bs, 3, 1, self.ego_fut_mode, self.ego_fut_ts, 2) # [6,3,1,6,6,2]
+        cls_pred = cls_pred[bs_indices, cmd] # [6,1,6]
+        reg_pred = reg_pred[bs_indices, cmd] # [6,1,6,6,2]
+        cls_target = get_cls_target(reg_pred, gt_reg_target, gt_reg_mask) # [6,1]
+        cls_weight = gt_reg_mask.any(dim=-1) # [6,1,6]  -> [6,1]
+        # import pdb;pdb.set_trace()
         best_reg = get_best_reg(reg_pred, gt_reg_target, gt_reg_mask)
-
+        # [6,1,6,6,2], [6,1,6,2], [6,1,6]
         return cls_pred, cls_target, cls_weight, best_reg, gt_reg_target, gt_reg_mask
 
 

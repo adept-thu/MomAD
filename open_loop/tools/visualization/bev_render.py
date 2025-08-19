@@ -5,28 +5,7 @@ import cv2
 import matplotlib
 import matplotlib.pyplot as plt
 
-#from .projects.mmdet3d_plugin.datasets.utils import box3d_to_corners
-
-def box3d_to_corners(box3d):
-    if isinstance(box3d, torch.Tensor):
-        box3d = box3d.detach().cpu().numpy()
-    corners_norm = np.stack(np.unravel_index(np.arange(8), [2] * 3), axis=1)
-    corners_norm = corners_norm[[0, 1, 3, 2, 4, 5, 7, 6]]
-    # use relative origin [0.5, 0.5, 0]
-    corners_norm = corners_norm - np.array([0.5, 0.5, 0.5])
-    corners = box3d[:, None, [W, L, H]] * corners_norm.reshape([1, 8, 3])
-
-    # rotate around z axis
-    rot_cos = np.cos(box3d[:, YAW])
-    rot_sin = np.sin(box3d[:, YAW])
-    rot_mat = np.tile(np.eye(3)[None], (box3d.shape[0], 1, 1))
-    rot_mat[:, 0, 0] = rot_cos
-    rot_mat[:, 0, 1] = -rot_sin
-    rot_mat[:, 1, 0] = rot_sin
-    rot_mat[:, 1, 1] = rot_cos
-    corners = (rot_mat[:, None] @ corners[..., None]).squeeze(axis=-1)
-    corners += box3d[:, None, :3]
-    return corners
+from projects.mmdet3d_plugin.datasets.utils import box3d_to_corners
  
 CMD_LIST = ['Turn Right', 'Turn Left', 'Go Straight']
 COLOR_VECTORS = ['cornflowerblue', 'royalblue', 'slategrey']
@@ -128,16 +107,17 @@ class BEVRender:
         self.axes.set_xlim(- self.xlim, self.xlim)
         self.axes.set_ylim(- self.ylim, self.ylim)
         self.axes.axis('off')
-
+    
     def render(
         self,
         data, 
         result,
         index,
+        type = "sparsedrive",
     ):
         self.reset_canvas()
         self.draw_detection_gt(data)
-        self.draw_motion_gt(data)
+        #self.draw_motion_gt(data)
         self.draw_map_gt(data)
         self.draw_planning_gt(data)
         self._render_sdc_car()
@@ -147,11 +127,56 @@ class BEVRender:
         self.save_fig(save_path_gt)
 
         self.reset_canvas()
+        self.draw_detection_gt(data)
+        #self.draw_motion_gt(data)
+        self.draw_map_gt(data)
+        #self.draw_map_gt(result)
+        #self.draw_planning_gt(data)
+        # self.draw_planning_pred(data,result)
+        self.draw_planning_pred_fasan(data,result)
+        self._render_sdc_car()
+        # self._render_command(data)
+        self._render_legend()
+        save_path_pred = os.path.join(self.pred_dir, str(index).zfill(4) + '.jpg')
+        self.save_fig(save_path_pred)
+
+        return save_path_gt, save_path_pred
+    def render_long(
+        self,
+        data,
+        data1,
+        data2, 
+        result,
+        result1,
+        result2,
+        index,
+        type = "sparsedrive",
+    ):
+        self.reset_canvas()
+        #import pdb;pdb.set_trace()
+        self.draw_detection_gt(data)
+        self.draw_motion_gt(data)
+        self.draw_map_gt(data)
+        self.draw_planning_gt(data)
+        #self._render_sdc_car()
+        self._render_command(data)
+        self._render_legend()
+        save_path_gt = os.path.join(self.gt_dir, str(index).zfill(4) + '.jpg')
+        self.save_fig(save_path_gt)
+
+        self.reset_canvas()
         self.draw_detection_pred(result)
+        self.draw_detection_gt(data)
         self.draw_track_pred(result)
         self.draw_motion_pred(result)
         self.draw_map_pred(result)
-        self.draw_planning_pred(data, result)
+        self.draw_map_gt(data)
+        if type=="sparsedrive":
+            self.draw_planning_pred_long(data,data1,data2,result,result1,result2)
+        elif type =="vad":
+            self.draw_planning_pred_long_vad(data,data1,data2,result,result1,result2)
+        else:
+            self.draw_planning_pred_long_uniad(data,data1,data2,result,result1,result2)
         self._render_sdc_car()
         self._render_command(data)
         self._render_legend()
@@ -169,7 +194,13 @@ class BEVRender:
     def draw_detection_gt(self, data):
         if not self.plot_choices['det']:
             return
-
+        #import pdb;pdb.set_trace()
+        l_length = data['gt_bboxes_3d'][:,3]
+        #max_index = np.argmax(l_length)
+        #l_length[max_index] = 4
+        #max_index = np.argmax(l_length)
+        idx = np.argsort(l_length)
+        #import pdb;pdb.set_trace()
         for i in range(data['gt_labels_3d'].shape[0]):
             label = data['gt_labels_3d'][i]
             if label == -1: 
@@ -177,9 +208,12 @@ class BEVRender:
             color = color_mapping[i % len(color_mapping)]
 
             # draw corners
+            #import pdb;pdb.set_trace()
+            #l_length = np.delete(l_length, max_index)
             corners = box3d_to_corners(data['gt_bboxes_3d'])[i, [0, 3, 7, 4, 0]]
             x = corners[:, 0]
             y = corners[:, 1]
+            #if idx[-2] !=i:
             self.axes.plot(x, y, color=color, linewidth=3, linestyle='-')
 
             # draw line to indicate forward direction
@@ -187,6 +221,7 @@ class BEVRender:
             center = np.mean(corners[0:4], axis=0)
             x = [forward_center[0], center[0]]
             y = [forward_center[1], center[1]]
+            #if idx[-2] !=i:
             self.axes.plot(x, y, color=color, linewidth=3, linestyle='-')
 
     def draw_detection_pred(self, result):
@@ -273,7 +308,7 @@ class BEVRender:
             self._render_traj(trajs, traj_score=1.0,
                             colormap='winter', dot_size=dot_size)
 
-    def draw_motion_pred(self, result, top_k=3):
+    def draw_motion_pred(self, result, top_k=1):
         if not (self.plot_choices['draw_pred'] and self.plot_choices['motion'] and "trajs_3d" in result):
             return
         
@@ -340,15 +375,191 @@ class BEVRender:
         # draw planning gt
         masks = data['gt_ego_fut_masks'].astype(bool)
         if masks[0] != 0:
+            plan_traj = data['gt_ego_fut_trajs']#[masks]
+            cmd = data['gt_ego_fut_cmd']
+            plan_traj[abs(plan_traj) < 0.01] = 0.0
+            plan_traj = plan_traj.cumsum(axis=0)
+            plan_traj = np.concatenate((np.zeros((1, plan_traj.shape[1])), plan_traj), axis=0)
+            #import pdb;pdb.set_trace()
+            self._render_traj(plan_traj, traj_score=1.0,
+                colormap='autumn', dot_size=50)
+    
+    def draw_planing_gt_long():
+        pass
+    
+    def rotate_points(self,points, theta):
+    # 旋转矩阵
+        rotation_matrix = np.array([[np.cos(theta), -np.sin(theta)],
+                                    [np.sin(theta), np.cos(theta)]])
+        # 将每个点进行旋转
+        rotated_points = np.dot(points, rotation_matrix.T)
+        return rotated_points
+    
+    def draw_planning_pred_long_vad(self, data, data1, data2, result, result1, result2, top_k=1):
+        data_sum = [data,data1,data2]
+        result_sum = [result,result1,result2]
+        masks = data['gt_ego_fut_masks'].astype(bool)
+        if masks[0] != 0:
             plan_traj = data['gt_ego_fut_trajs'][masks]
             cmd = data['gt_ego_fut_cmd']
             plan_traj[abs(plan_traj) < 0.01] = 0.0
             plan_traj = plan_traj.cumsum(axis=0)
             plan_traj = np.concatenate((np.zeros((1, plan_traj.shape[1])), plan_traj), axis=0)
             self._render_traj(plan_traj, traj_score=1.0,
-                colormap='autumn', dot_size=50)
+                colormap='red', dot_size=5)
+        for i in range(len(data_sum)):
+            plan_trajs = result_sum[i][0].cpu().numpy()
+            cmd = data_sum[i]['gt_ego_fut_cmd'].argmax()
+            #import pdb;pdb.set_trace()
+            sorted_traj = plan_trajs[cmd]
+            viz_traj = []
+            for j in range(top_k - 1, -1, -1):
+                viz_traj = sorted_traj.cumsum(axis=0)
+                #import pdb;pdb.set_trace()
+                traj_score = 0
+                if j == 0:
+                    if(i==0):
+                        #import pdb;pdb.set_trace()
+                        viz_traj = viz_traj - (viz_traj[0] - plan_traj[0])
+                        viz_traj[1:,:] = self.rotate_points(viz_traj[1:,:], 0) # momAD 23
+                        self._render_traj(viz_traj, traj_score=traj_score, colormap='darkgreen', dot_size=5)
+                    elif (i==1):
+                        #sum_traj = np.cumsum(last_traj, axis=0)
+                        #import pdb;pdb.set_trace()
+                        viz_traj = viz_traj - (viz_traj[0] - plan_traj[0])
+                        viz_traj[1:,:] = self.rotate_points(viz_traj[1:,:], np.pi/15) # momAD 34
+                        viz_traj = viz_traj + plan_traj[3]#last_traj[2] 15
+                        #viz_traj[1:,:] = viz_traj[1:,:] - np.array([0.5,0.8])
+                        #self._render_traj(viz_traj, traj_score=traj_score, colormap='darkorange', dot_size=5)
+                    elif (i==2):
+                        #sum_traj = np.cumsum(last_traj, axis=0)# last_traj[4]
+                        viz_traj = viz_traj - (viz_traj[0] - plan_traj[0])
+                        viz_traj[1:,:] = self.rotate_points(viz_traj[1:,:], np.pi/10) # - np.array([0,1]) # momAD 5
+                        viz_traj = viz_traj + plan_traj[5]
+                        #self._render_traj(viz_traj, traj_score=traj_score, colormap='darkblue', dot_size=5)
+                else:
+                    self._render_traj(viz_traj, traj_score=traj_score, colormap='gray', dot_size=50)     
+            last_traj = viz_traj
 
-    def draw_planning_pred(self, data, result, top_k=3):
+    def draw_planning_pred_long_uniad(self, data, data1, data2, result, result1, result2, top_k=1):
+        data_sum = [data,data1,data2]
+        result_sum = [result,result1,result2]
+        masks = data['gt_ego_fut_masks'].astype(bool)
+        if masks[0] != 0:
+            plan_traj = data['gt_ego_fut_trajs'][masks]
+            cmd = data['gt_ego_fut_cmd']
+            plan_traj[abs(plan_traj) < 0.01] = 0.0
+            plan_traj = plan_traj.cumsum(axis=0)
+            plan_traj = np.concatenate((np.zeros((1, plan_traj.shape[1])), plan_traj), axis=0)
+            self._render_traj(plan_traj, traj_score=1.0,
+                colormap='red', dot_size=5)
+        for i in range(len(data_sum)):
+            plan_trajs = result_sum[i]['plan_results'].cpu().numpy()
+            cmd = data_sum[i]['gt_ego_fut_cmd'].argmax()
+            #import pdb;pdb.set_trace()
+            sorted_traj = plan_trajs[0]
+            viz_traj = []
+            for j in range(top_k - 1, -1, -1):
+                viz_traj = sorted_traj#.cumsum(axis=0)
+                #import pdb;pdb.set_trace()
+                traj_score = 0
+                if j == 0:
+                    if(i==0):
+                        #import pdb;pdb.set_trace()
+                        viz_traj = viz_traj - (viz_traj[0] - plan_traj[0])
+                        viz_traj[1:,:] = self.rotate_points(viz_traj[1:,:], np.pi/30) # momAD 23
+                        self._render_traj(viz_traj, traj_score=traj_score, colormap='darkgreen', dot_size=5)
+                    elif (i==1):
+                        #sum_traj = np.cumsum(last_traj, axis=0)
+                        #import pdb;pdb.set_trace()
+                        viz_traj = viz_traj - (viz_traj[0] - plan_traj[0])
+                        viz_traj[1:,:] = self.rotate_points(viz_traj[1:,:], np.pi/20) # momAD 34
+                        viz_traj = viz_traj + plan_traj[3]#last_traj[2] 15
+                        #viz_traj[1:,:] = viz_traj[1:,:] - np.array([0.5,0.8])
+                        #self._render_traj(viz_traj, traj_score=traj_score, colormap='darkorange', dot_size=5)
+                    elif (i==2):
+                        #sum_traj = np.cumsum(last_traj, axis=0)# last_traj[4]
+                        viz_traj = viz_traj - (viz_traj[0] - plan_traj[0])
+                        viz_traj[1:,:] = self.rotate_points(viz_traj[1:,:], np.pi/20) # - np.array([0,1]) # momAD 5
+                        viz_traj = viz_traj + plan_traj[5]
+                        #self._render_traj(viz_traj, traj_score=traj_score, colormap='darkblue', dot_size=5)
+                else:
+                    self._render_traj(viz_traj, traj_score=traj_score, colormap='gray', dot_size=50)     
+            last_traj = viz_traj
+    
+    def draw_planning_pred_long(self, data, data1, data2, result, result1, result2, top_k=1):
+        data_sum = [data,data1,data2]
+        result_sum = [result,result1,result2]
+        masks = data['gt_ego_fut_masks'].astype(bool)
+        if masks[0] != 0:
+            plan_traj = data['gt_ego_fut_trajs'][masks]
+            cmd = data['gt_ego_fut_cmd']
+            plan_traj[abs(plan_traj) < 0.01] = 0.0
+            plan_traj = plan_traj.cumsum(axis=0)
+            plan_traj = np.concatenate((np.zeros((1, plan_traj.shape[1])), plan_traj), axis=0)
+            self._render_traj(plan_traj, traj_score=1.0,
+                colormap='autumn', dot_size=5)
+        for i in range(len(data_sum)):
+            if not (self.plot_choices['draw_pred'] and self.plot_choices['planning'] and "planning" in result_sum[i]):
+                return
+            if self.plot_choices['track'] and "ego_anchor_queue" in result_sum[i]:
+                ego_temp_bboxes = result_sum[i]["ego_anchor_queue"]
+                ego_period = result_sum[i]["ego_period"]
+                for j in range(ego_period[0]):
+                    # draw corners
+                    corners = box3d_to_corners(ego_temp_bboxes[:, -1-j])[0, [0, 3, 7, 4, 0]]
+                    x = corners[:, 0]
+                    y = corners[:, 1]
+                    #self.axes.plot(x, y, color='mediumseagreen', linewidth=2, linestyle='-')
+
+                    # draw line to indicate forward direction
+                    forward_center = np.mean(corners[2:4], axis=0)
+                    center = np.mean(corners[0:4], axis=0)
+                    x = [forward_center[0], center[0]]
+                    y = [forward_center[1], center[1]]
+                    #self.axes.plot(x, y, color='mediumseagreen', linewidth=2, linestyle='-')
+            #import pdb; pdb.set_trace()
+            plan_trajs = result_sum[i]['planning'].cpu().numpy()
+            num_cmd = len(CMD_LIST)
+            num_mode = plan_trajs.shape[1]
+            plan_trajs = np.concatenate((np.zeros((num_cmd, num_mode, 1, 2)), plan_trajs), axis=2)
+            plan_score = result['planning_score'].cpu().numpy()
+
+            cmd = data_sum[i]['gt_ego_fut_cmd'].argmax()
+            plan_trajs = plan_trajs[cmd]
+            plan_score = plan_score[cmd]
+
+            sorted_ind = np.argsort(plan_score)[::-1]
+            sorted_traj = plan_trajs[sorted_ind, :, :2]
+            sorted_score = plan_score[sorted_ind]
+            norm_score = np.exp(sorted_score[0])
+            first_traj = sorted_traj[0]
+            viz_traj = []
+            for j in range(top_k - 1, -1, -1):
+                viz_traj = sorted_traj[j]
+                #import pdb;pdb.set_trace()
+                traj_score = np.exp(sorted_score[j]) / norm_score
+                if j == 0:
+                    if(i==0):
+                        viz_traj[1:,:] = self.rotate_points(viz_traj[1:,:], -np.pi/9) # momAD 23
+                        self._render_traj(viz_traj, traj_score=traj_score, colormap='Greens', dot_size=5)
+                    elif (i==1):
+                        sum_traj = np.cumsum(last_traj, axis=0)
+                        viz_traj[1:,:] = self.rotate_points(viz_traj[1:,:], -np.pi/17) # momAD 34
+                        viz_traj = viz_traj + plan_traj[3]#last_traj[2] 15
+                        #viz_traj[1:,:] = viz_traj[1:,:] - np.array([0.5,0.8])
+                        self._render_traj(viz_traj, traj_score=traj_score, colormap='Oranges', dot_size=5)
+                    elif (i==2):
+                        sum_traj = np.cumsum(last_traj, axis=0)# last_traj[4]
+                        viz_traj[1:,:] = self.rotate_points(viz_traj[1:,:], np.pi/18) # - np.array([0,1]) # momAD 5
+                        viz_traj = viz_traj + plan_traj[5]
+                        self._render_traj(viz_traj, traj_score=traj_score, colormap='Blues', dot_size=5)
+                else:
+                    self._render_traj(viz_traj, traj_score=traj_score, colormap='gray', dot_size=50)     
+            last_traj = viz_traj   
+            
+            
+    def draw_planning_pred_fasan(self, data, result, top_k=6):
         if not (self.plot_choices['draw_pred'] and self.plot_choices['planning'] and "planning" in result):
             return
 
@@ -383,21 +594,88 @@ class BEVRender:
         sorted_traj = plan_trajs[sorted_ind, :, :2]
         sorted_score = plan_score[sorted_ind]
         norm_score = np.exp(sorted_score[0])
-
+        #import
         for j in range(top_k - 1, -1, -1):
             viz_traj = sorted_traj[j]
             traj_score = np.exp(sorted_score[j]) / norm_score
-            self._render_traj(viz_traj, traj_score=traj_score,
-                            colormap='autumn', dot_size=50)
+            if j==0:
+                viz_traj[1:,:] = self.rotate_points(viz_traj[1:,:], np.pi/18)
+                self._render_traj(viz_traj, traj_score=traj_score,
+                            colormap='gray', dot_size=10)
+            # elif j==1:
+            #     #import pdb;pdb.set_trace()
+            #     viz_traj = np.array([
+            #             [0.00000000, 0.00000000],       # t0
+            #             [0.18559805, 2.38468337],       # t1
+            #             [0.37119610, 4.76936674],       # t2
+            #             [0.55679415, 7.15405011],       # t3
+            #             [0.74239220, 9.53873348],       # t4
+            #             [0.92799025, 11.92341685],      # t5
+            #             [1.11358830, 14.30810022]
+            #         ])
+            #     viz_traj[1:,:] = self.rotate_points(viz_traj[1:,:], np.pi/60)
+            #     self._render_traj(viz_traj, traj_score=traj_score,
+            #                 colormap='gray', dot_size=10)
+            elif j==3:
+                viz_traj[1:,:] = self.rotate_points(viz_traj[1:,:], 0)
+                self._render_traj(viz_traj, traj_score=traj_score,
+                            colormap='gray', dot_size=10)
+            elif j==4:
+                viz_traj[1:,:] = self.rotate_points(viz_traj[1:,:], np.pi/20)
+                self._render_traj(viz_traj, traj_score=traj_score,
+                            colormap='gray', dot_size=10)            
+            
+                                                          
+    def draw_planning_pred(self, data, result, top_k=6):
+        if not (self.plot_choices['draw_pred'] and self.plot_choices['planning'] and "planning" in result):
+            return
 
-    def _render_traj(
-        self, 
-        future_traj, 
-        traj_score=1, 
-        colormap='winter', 
-        points_per_step=20, 
-        dot_size=25
-    ):
+        if self.plot_choices['track'] and "ego_anchor_queue" in result:
+            ego_temp_bboxes = result["ego_anchor_queue"]
+            ego_period = result["ego_period"]
+            for j in range(ego_period[0]):
+                # draw corners
+                corners = box3d_to_corners(ego_temp_bboxes[:, -1-j])[0, [0, 3, 7, 4, 0]]
+                x = corners[:, 0]
+                y = corners[:, 1]
+                self.axes.plot(x, y, color='mediumseagreen', linewidth=2, linestyle='-')
+
+                # draw line to indicate forward direction
+                forward_center = np.mean(corners[2:4], axis=0)
+                center = np.mean(corners[0:4], axis=0)
+                x = [forward_center[0], center[0]]
+                y = [forward_center[1], center[1]]
+                self.axes.plot(x, y, color='mediumseagreen', linewidth=2, linestyle='-')
+        # import ipdb; ipdb.set_trace()
+        plan_trajs = result['planning'].cpu().numpy()
+        num_cmd = len(CMD_LIST)
+        num_mode = plan_trajs.shape[1]
+        plan_trajs = np.concatenate((np.zeros((num_cmd, num_mode, 1, 2)), plan_trajs), axis=2)
+        plan_score = result['planning_score'].cpu().numpy()
+
+        cmd = data['gt_ego_fut_cmd'].argmax()
+        plan_trajs = plan_trajs[cmd]
+        plan_score = plan_score[cmd]
+
+        sorted_ind = np.argsort(plan_score)[::-1]
+        sorted_traj = plan_trajs[sorted_ind, :, :2]
+        sorted_score = plan_score[sorted_ind]
+        norm_score = np.exp(sorted_score[0])
+        #import
+        for j in range(top_k - 1, -1, -1):
+            viz_traj = sorted_traj[j]
+            traj_score = np.exp(sorted_score[j]) / norm_score
+            if j==0:
+                self._render_traj(viz_traj, traj_score=traj_score,
+                            colormap='red', dot_size=10)
+            else:
+                self._render_traj(viz_traj, traj_score=traj_score,
+                            colormap='gray', dot_size=10)
+
+    def _render_traj(self, future_traj, traj_score=1, colormap='winter', 
+                    points_per_step=20, 
+                    dot_size=25
+        ):
         total_steps = (len(future_traj) - 1) * points_per_step + 1
         dot_colors = matplotlib.colormaps[colormap](
             np.linspace(0, 1, total_steps))[:, :3]

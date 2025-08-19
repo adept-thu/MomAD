@@ -9,11 +9,11 @@ dist_params = dict(backend="nccl")
 log_level = "INFO"
 work_dir = None
 
-total_batch_size = 48
+total_batch_size = 64
 num_gpus = 8
 batch_size = total_batch_size // num_gpus
 num_iters_per_epoch = int(length[version] // (num_gpus * batch_size))
-num_epochs = 20
+num_epochs = 100
 checkpoint_epoch_interval = 20
 
 checkpoint_config = dict(
@@ -27,7 +27,6 @@ log_config = dict(
     ],
 )
 load_from = None
-# resume_from = "work_dirs/sparsedrive_small_stage2_roboAD/iter_5860.pth"
 resume_from = None
 workflow = [("train", 1)]
 fp16 = dict(loss_scale=32.0)
@@ -59,7 +58,7 @@ roi_size = (30, 60)
 num_sample = 20
 fut_ts = 12
 fut_mode = 6
-ego_fut_ts = 12
+ego_fut_ts = 6
 ego_fut_mode = 6
 queue_length = 4 # history + current
 
@@ -83,7 +82,7 @@ with_quality_estimation = True
 task_config = dict(
     with_det=True,
     with_map=True,
-    with_motion_plan=True,
+    with_motion_plan=False,
 )
 
 model = dict(
@@ -145,11 +144,11 @@ model = dict(
             ),
             num_single_frame_decoder=num_single_frame_decoder,
             operation_order=(
-                # [
-                #     "gnn",
-                # "denoise",
-                # ]
-                # +
+                [
+                    "gnn",
+                "denoise",
+                ]
+                +
                 [
                     "gnn",
                     "norm",
@@ -169,7 +168,7 @@ model = dict(
                     "refine",
                 ]
                 * (num_decoder - num_single_frame_decoder)
-            )[2:],
+            ),
             temp_graph_model=dict(
                 type="MultiheadFlashAttention",
                 embed_dims=embed_dims if not decouple_attn else embed_dims * 2,
@@ -280,7 +279,7 @@ model = dict(
                 embed_dims=embed_dims,
                 anchor="data/kmeans/kmeans_map_100.npy",
                 anchor_handler=dict(type="SparsePoint3DKeyPointsGenerator"),
-                num_temp_instances=33 if temporal_map else -1,
+                num_temp_instances=0 if temporal_map else -1,
                 confidence_decay=0.6,
                 feat_grad=True,
             ),
@@ -403,7 +402,7 @@ model = dict(
             task_prefix='map',
         ),
         motion_plan_head=dict(
-            type='MotionPlanningHeadroboAD_6s',
+            type='MotionPlanningHeadroboAD',
             fut_ts=fut_ts,
             fut_mode=fut_mode,
             ego_fut_ts=ego_fut_ts,
@@ -412,7 +411,6 @@ model = dict(
             plan_anchor=f'data/kmeans/kmeans_plan_{ego_fut_mode}.npy',
             embed_dims=embed_dims,
             decouple_attn=decouple_attn_motion,
-            use_rescore=True,
             instance_queue=dict(
                 type="InstanceQueue",
                 embed_dims=embed_dims,
@@ -513,7 +511,7 @@ model = dict(
 )
 
 # ================== data ========================
-dataset_type = "NuScenes3DDataset_roboAD_6s"
+dataset_type = "NuScenes3DDataset"
 data_root = "data/nuscenes/"
 anno_root = "data/infos/" if version == 'trainval' else "data/infos/mini/"
 file_client_args = dict(backend="disk")
@@ -572,7 +570,7 @@ train_pipeline = [
             'gt_ego_fut_cmd',
             'ego_status',
         ],
-        meta_keys=["T_global", "T_global_inv", "timestamp", "instance_id","token"],
+         meta_keys=["T_global", "T_global_inv", "timestamp", "instance_id","token"],
     ),
 ]
 test_pipeline = [
@@ -640,7 +638,7 @@ data_basic_config = dict(
 )
 eval_config = dict(
     **data_basic_config,
-    ann_file=anno_root + 'nuscenes_infos_val_6s.pkl',
+    ann_file=anno_root + 'nuscenes_infos_val.pkl',
     pipeline=eval_pipeline,
     test_mode=True,
 )
@@ -660,7 +658,7 @@ data = dict(
     workers_per_gpu=batch_size,
     train=dict(
         **data_basic_config,
-        ann_file=anno_root + "nuscenes_infos_train_6s.pkl",
+        ann_file=anno_root + "nuscenes_infos_train.pkl",
         pipeline=train_pipeline,
         test_mode=False,
         data_aug_conf=data_aug_conf,
@@ -670,7 +668,7 @@ data = dict(
     ),
     val=dict(
         **data_basic_config,
-        ann_file=anno_root + "nuscenes_infos_val_6s.pkl",
+        ann_file=anno_root + "nuscenes_infos_val.pkl",
         pipeline=test_pipeline,
         data_aug_conf=data_aug_conf,
         test_mode=True,
@@ -678,7 +676,7 @@ data = dict(
     ),
     test=dict(
         **data_basic_config,
-        ann_file=anno_root + "nuscenes_infos_val_6s.pkl",
+        ann_file=anno_root + "nuscenes_infos_val.pkl",
         pipeline=test_pipeline,
         data_aug_conf=data_aug_conf,
         test_mode=True,
@@ -689,11 +687,11 @@ data = dict(
 # ================== training ========================
 optimizer = dict(
     type="AdamW",
-    lr=3e-4,
+    lr=4e-4,
     weight_decay=0.001,
     paramwise_cfg=dict(
         custom_keys={
-            "img_backbone": dict(lr_mult=0.1),
+            "img_backbone": dict(lr_mult=0.5),
         }
     ),
 )
@@ -715,8 +713,8 @@ eval_mode = dict(
     with_det=True,
     with_tracking=True,
     with_map=True,
-    with_motion=True,
-    with_planning=True,
+    with_motion=False,
+    with_planning=False,
     tracking_threshold=0.2,
     motion_threshhold=0.2,
 )
@@ -724,6 +722,4 @@ evaluation = dict(
     interval=num_iters_per_epoch*checkpoint_epoch_interval,
     eval_mode=eval_mode,
 )
-# ================== pretrained model ========================
-load_from = 'ckpt/sparsedrive_stage2.pth'
-# load_from = 'ckpt/sparsedrive_stage1.pth'
+load_from = 'ckpt/sparsedrive_stage1.pth'

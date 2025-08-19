@@ -12,7 +12,9 @@ K = 6
 
 fp = 'data/infos/nuscenes_infos_train.pkl'
 data = mmcv.load(fp)
-data_infos = list(sorted(data["infos"], key=lambda e: e["timestamp"]))
+#data_infos = list(sorted(data["infos"], key=lambda e: e["timestamp"]))
+data_infos = list(data["infos"])
+import pdb;pdb.set_trace()
 navi_trajs = [[], [], []]
 for idx in tqdm(range(len(data_infos))):
     info = data_infos[idx]

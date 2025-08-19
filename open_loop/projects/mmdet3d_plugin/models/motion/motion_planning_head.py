@@ -341,6 +341,7 @@ class MotionPlanningHead(BaseModule):
             "period": self.instance_queue.period,
             "anchor_queue": self.instance_queue.anchor_queue,
         }
+        #import pdb;pdb.set_trace()
         planning_output = {
             "classification": planning_classification,
             "prediction": planning_prediction,
@@ -433,9 +434,10 @@ class MotionPlanningHead(BaseModule):
                 data['gt_ego_fut_masks'],
                 data,
             )
-            cls = cls.flatten(end_dim=1)
-            cls_target = cls_target.flatten(end_dim=1)
-            cls_weight = cls_weight.flatten(end_dim=1)
+            import pdb;pdb.set_trace()
+            cls = cls.flatten(end_dim=1) # [6,1,6] , [6,6]
+            cls_target = cls_target.flatten(end_dim=1) # [6,1], [6]
+            cls_weight = cls_weight.flatten(end_dim=1) # [6,1], [6]
             cls_loss = self.plan_loss_cls(cls, cls_target, weight=cls_weight)
 
             reg_weight = reg_weight.flatten(end_dim=1)
