@@ -53,7 +53,7 @@ End-to-end autonomous driving frameworks facilitate seamless integration of perc
 ### Open-loop mertics
 
 - Planning results on [nuScenes](https://github.com/nutonomy/nuscenes-devkit).
-- MomAD 3s stage2: [ckpt](https://huggingface.co/ZI-YING/MomAD_nuScenes_stage2_planing_3s/resolve/main/iter_29300.pth)
+- MomAD 3s stage2: [ckpt](https://huggingface.co/ZI-YING/MomAD_nuScenes_stage2_planing_3s)
 
 | Method | Backbone | L2 (m) 1s  | L2 (m) 2s | L2 (m) 3s | L2 (m) Avg | Col. (%) 1s | Col. (%) 2s | Col. (%) 3s | Col. (%) Avg | TPC (m) 1s | TPC (m) 2s | TPC (m) 3s | TPC (m) Avg | FPS |
 | :---: | :---:| :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |:---: |
