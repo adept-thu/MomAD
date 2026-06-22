@@ -63,7 +63,7 @@ SparseDrive |ResNet50| **0.29**  | 0.58  | 0.96 |  0.61 |  **0.01** |  **0.05** 
 
 - Planning results for long trajectory prediction on [nuScenes](https://github.com/nutonomy/nuscenes-devkit).  We train 10 epochs on 6s trajectories and test on 6s trajectories.
 - trainning log:[log](/open_loop/launcher.log)
-- MomAD 6s stage2: ckpt(https://huggingface.co/ZI-YING/MomAD_nuScenes_stage2_planing_6s/tree/main)
+- MomAD 6s stage2: [ckpt](https://huggingface.co/ZI-YING/MomAD_nuScenes_stage2_planing_6s/tree/main)
 
 | Method | L2 (m) 4s  | L2 (m) 5s | L2 (m) 6s | Col. (%) 4s | Col. (%) 5s | Col. (%) 6s | TPC (m) 4s | TPC (m) 5s | TPC (m) 6s |
 | :---: | :---:| :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
